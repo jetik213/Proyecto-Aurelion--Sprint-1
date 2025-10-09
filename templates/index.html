@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot Aurelion</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         /* Importamos una fuente moderna desde Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
@@ -21,7 +23,7 @@
 
         /* Contenedor principal del chatbot */
         .chat-container {
-            width: 450px;
+            width: 47%;
             height: 90vh;
             max-height: 700px;
             background-color: #ffffff;
@@ -61,7 +63,7 @@
         .message {
             padding: 12px 18px;
             border-radius: 20px;
-            max-width: 80%;
+            max-width: 100%;
             line-height: 1.5;
             word-wrap: break-word;
         }
@@ -182,9 +184,8 @@
             const messageElement = document.createElement('div');
             messageElement.classList.add('message', remitente === 'bot' ? 'bot-message' : 'user-message');
             
-            // Usamos innerHTML para que el navegador interprete saltos de línea y formato.
-            // Reemplazamos los saltos de línea de texto plano (\n) por etiquetas <br> de HTML.
-            messageElement.innerHTML = texto.replace(/\n/g, '<br>');
+            // Usamos la librería marked para convertir el texto de Markdown a HTML.
+            messageElement.innerHTML = marked.parse(texto);
 
             chatWindow.appendChild(messageElement);
             // Hacemos scroll hacia abajo para que el último mensaje sea visible.
