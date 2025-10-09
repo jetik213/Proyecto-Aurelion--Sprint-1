@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Aurelion</title>
+    <style>
+        /* Importamos una fuente moderna desde Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+        /* Estilos generales para el cuerpo de la página */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f4f8; /* Un fondo gris azulado claro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* Contenedor principal del chatbot */
+        .chat-container {
+            width: 450px;
+            height: 90vh;
+            max-height: 700px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Cabecera del chat */
+        .chat-header {
+            background: linear-gradient(90deg, #007BFF, #0056b3); /* Gradiente azul */
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        /* Ventana donde se muestran los mensajes */
+        .chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto; /* Permite hacer scroll si los mensajes no caben */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Estilo base para cada mensaje */
+        .message {
+            padding: 12px 18px;
+            border-radius: 20px;
+            max-width: 80%;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        /* Mensajes del chatbot (izquierda) */
+        .bot-message {
+            background-color: #e9ecef; /* Gris claro */
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        /* Mensajes del usuario (derecha) */
+        .user-message {
+            background-color: #007BFF; /* Azul primario */
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+        
+        /* Contenedor para las opciones del menú */
+        .menu-options {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px; /* Espacio entre el desplegable y el botón */
+            align-items: center;
+        }
+
+        /* Estilo del menú desplegable */
+        .menu-select {
+            flex-grow: 1; /* Ocupa el espacio disponible */
+            padding: 8px 12px;
+            border-radius: 15px;
+            border: 1px solid #007BFF;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9em;
+            color: #333;
+            background-color: #fff;
+            cursor: pointer;
+            -webkit-appearance: none; /* Quita la apariencia nativa en Webkit */
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5z%22%20fill%3D%22%23007BFF%22/%3E%3C/svg%3E');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 1em;
+        }
+
+        /* Estilo de los botones del menú (reutilizado para el botón Enviar) */
+        .menu-button {
+            background-color: #f8f9fa;
+            border: 1px solid #007BFF;
+            color: #007BFF;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            white-space: nowrap; /* Evita que el texto del botón se rompa */
+        }
+
+        .menu-button:hover {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .menu-button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            border-color: #ced4da;
+            cursor: not-allowed;
+        }
+
+        .menu-select:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Asistente Aurelion</h2>
+        </div>
+        <div class="chat-window" id="chat-window">
+            <!-- El primer mensaje del bot se añade aquí con JavaScript -->
+        </div>
+        <div class="menu-options" id="menu-options">
+            <!-- El menú desplegable y el botón se generan con JavaScript -->
+        </div>
+        <div class="sub-options" id="sub-options" style="padding: 0 15px 15px; display: flex; flex-wrap: wrap; gap: 10px;">
+            <!-- Los botones de sub-opción se generan aquí -->
+        </div>
+    </div>
+
+    <script>
+        // Obtenemos las referencias a los elementos del DOM que vamos a manipular.
+        const chatWindow = document.getElementById('chat-window');
+        const menuOptions = document.getElementById('menu-options');
+        const subOptionsContainer = document.getElementById('sub-options');
+
+        // Definimos las opciones del menú.
+        const opciones = [
+            { texto: "Tema del Proyecto", valor: "1" },
+            { texto: "Problema", valor: "2" },
+            { texto: "Solución Propuesta", valor: "3" },
+            { texto: "Set de datos", valor: "4" },
+            { texto: "Pasos", valor: "5" },
+            { texto: "Diagrama de flujo", valor: "6" },
+            { texto: "Pseudocódigo", valor: "7" }
+        ];
+
+        // Función para añadir un mensaje a la ventana de chat.
+        function agregarMensaje(texto, remitente) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', remitente === 'bot' ? 'bot-message' : 'user-message');
+            
+            // Usamos innerHTML para que el navegador interprete saltos de línea y formato.
+            // Reemplazamos los saltos de línea de texto plano (\n) por etiquetas <br> de HTML.
+            messageElement.innerHTML = texto.replace(/\n/g, '<br>');
+
+            chatWindow.appendChild(messageElement);
+            // Hacemos scroll hacia abajo para que el último mensaje sea visible.
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Función para mostrar las sub-opciones como botones.
+        function mostrarSubsecciones(opcionesSubseccion) {
+            subOptionsContainer.innerHTML = ''; // Limpiamos el contenedor
+            opcionesSubseccion.forEach(subOpcion => {
+                const button = document.createElement('button');
+                button.textContent = subOpcion.texto;
+                button.classList.add('menu-button');
+                button.onclick = () => seleccionarSubseccion(subOpcion);
+                subOptionsContainer.appendChild(button);
+            });
+        }
+
+        // Función para manejar la selección de una sub-opción.
+        async function seleccionarSubseccion(subOpcion) {
+            agregarMensaje(subOpcion.texto, 'user');
+            subOptionsContainer.innerHTML = ''; // Ocultamos los botones de sub-opción
+
+            const thinkingMessage = document.createElement('div');
+            thinkingMessage.classList.add('message', 'bot-message');
+            thinkingMessage.innerHTML = "Consultando la información...";
+            chatWindow.appendChild(thinkingMessage);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chatbot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subopcion: subOpcion.valor }),
+                });
+
+                if (!response.ok) throw new Error('Error en la respuesta del servidor.');
+
+                const data = await response.json();
+                chatWindow.removeChild(thinkingMessage);
+                agregarMensaje(data.respuesta, 'bot');
+
+            } catch (error) {
+                chatWindow.removeChild(thinkingMessage);
+                agregarMensaje('Lo siento, no pude obtener la información. Inténtalo de nuevo.', 'bot');
+                console.error('Error:', error);
+            }
+        }
+
+        // Función para manejar la selección de una opción del menú.
+        async function seleccionarOpcion(opcion) {
+            // Mostramos la opción que el usuario eligió.
+            agregarMensaje(opcion.texto, 'user');
+
+            // Deshabilitamos el formulario para evitar envíos múltiples
+            document.getElementById('menu-select').disabled = true;
+            document.getElementById('send-button').disabled = true;
+
+            // Mostramos un mensaje de "pensando..." para que el usuario sepa que algo está pasando.
+            const thinkingMessage = document.createElement('div');
+            thinkingMessage.classList.add('message', 'bot-message');
+            thinkingMessage.innerHTML = "Consultando la información...";
+            chatWindow.appendChild(thinkingMessage);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                // Hacemos la solicitud a nuestro servidor Python (backend).
+                const response = await fetch('/api/chatbot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    // Enviamos la opción seleccionada en formato JSON.
+                    body: JSON.stringify({ opcion: opcion.valor }),
+                });
+
+                if (!response.ok) {
+                    // Si la respuesta del servidor no es exitosa, lanzamos un error.
+                    throw new Error('Error en la respuesta del servidor.');
+                }
+
+                // Convertimos la respuesta JSON a un objeto de JavaScript.
+                const data = await response.json();
+                
+                // Eliminamos el mensaje de "pensando...".
+                chatWindow.removeChild(thinkingMessage);
+
+                if (data.subsecciones) {
+                    // Si la respuesta indica que hay subsecciones, las mostramos.
+                    if (data.respuesta) {
+                        agregarMensaje(data.respuesta, 'bot');
+                    }
+                    agregarMensaje("Por favor, elige una de las siguientes bases de datos para ver su detalle:", 'bot');
+                    mostrarSubsecciones(data.opciones_subseccion);
+                } else {
+                    // Si no, mostramos la respuesta directamente.
+                    agregarMensaje(data.respuesta, 'bot');
+                }
+
+            } catch (error) {
+                // Si ocurre un error en la comunicación, lo mostramos en el chat.
+                chatWindow.removeChild(thinkingMessage);
+                agregarMensaje('Lo siento, no pude obtener la información. Inténtalo de nuevo.', 'bot');
+                console.error('Error:', error);
+            } finally {
+                // Volvemos a habilitar el formulario
+                document.getElementById('menu-select').disabled = false;
+                document.getElementById('send-button').disabled = false;
+            }
+        }
+
+        // Función para inicializar el chatbot.
+        function iniciarChat() {
+            // Mensaje de bienvenida del bot.
+            agregarMensaje("¡Hola! Soy Aurelion, tu asistente virtual. ¿Sobre qué te gustaría saber? Elige una de las siguientes opciones:", 'bot');
+
+            // Creamos el menú desplegable
+            const menuSelect = document.createElement('select');
+            menuSelect.id = 'menu-select';
+            menuSelect.classList.add('menu-select');
+
+            // Añadimos una opción por defecto, que estará seleccionada pero deshabilitada.
+            const defaultOption = document.createElement('option');
+            defaultOption.textContent = "Selecciona una opción...";
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            menuSelect.appendChild(defaultOption);
+
+            // Creamos y añadimos las opciones al menú desplegable.
+            opciones.forEach(opcion => {
+                const optionElement = document.createElement('option');
+                // Añadimos el número al texto que se muestra.
+                optionElement.textContent = `${opcion.valor}. ${opcion.texto}`;
+                optionElement.value = opcion.valor;
+                menuSelect.appendChild(optionElement);
+            });
+
+            // Creamos el botón de envío.
+            const sendButton = document.createElement('button');
+            sendButton.id = 'send-button';
+            sendButton.textContent = 'Enviar';
+            sendButton.classList.add('menu-button');
+
+            // Asignamos el evento de clic al botón.
+            sendButton.onclick = () => {
+                const selectedValue = menuSelect.value;
+                // Nos aseguramos de que se haya elegido una opción válida.
+                if (selectedValue && !menuSelect.options[menuSelect.selectedIndex].disabled) {
+                    // Buscamos el objeto 'opcion' completo para pasarlo a la función.
+                    const selectedOpcion = opciones.find(o => o.valor === selectedValue);
+                    if (selectedOpcion) {
+                        seleccionarOpcion(selectedOpcion);
+                    }
+                }
+            };
+            
+            // Limpiamos el contenedor de opciones y añadimos los nuevos elementos.
+            menuOptions.innerHTML = '';
+            menuOptions.appendChild(menuSelect);
+            menuOptions.appendChild(sendButton);
+        }
+
+        // Iniciamos el chat cuando la página se carga completamente.
+        window.onload = iniciarChat;
+    </script>
+
+</body>
+</html>

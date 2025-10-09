@@ -1,129 +1,143 @@
-'''
-Este script de Python está diseñado para realizar un proceso completo de ETL (Extracción, Transformación y Carga) 
-y análisis de datos de ventas de la empresa ficticia Aurelion.
-
-Funcionalidades principales:
-1.  **Carga de Datos:** Lee archivos de Excel desde una carpeta local que contienen información sobre clientes, 
-    productos, ventas y detalles de ventas.
-2.  **Limpieza de Datos:** Realiza operaciones de limpieza en cada conjunto de datos, como el manejo de valores nulos 
-    y la corrección de tipos de datos para garantizar la calidad y consistencia de la información.
-3.  **Unificación de Datos:** Combina los diferentes conjuntos de datos en un único DataFrame analítico. 
-    Este DataFrame consolidado permite tener una visión integral del negocio, conectando ventas con clientes y productos.
-4.  **Análisis Exploratorio (próximamente):** A partir del DataFrame unificado, se podrán realizar análisis para 
-    extraer insights, como identificar los productos más vendidos, los clientes más valiosos, y las tendencias de ventas a lo largo del tiempo.
-
-El código está estructurado de manera clara y comentado para facilitar su comprensión, especialmente para aquellos 
-que se inician en el análisis de datos con Python y la librería pandas.
-'''
-
-import pandas as pd
-import numpy as np
+# -*- coding: utf-8 -*-
+# Importamos los módulos necesarios de la biblioteca estándar de Python.
+# http.server nos permite crear un servidor web.
+# socketserver nos ayuda a manejar las conexiones de red.
+# json nos permite trabajar con datos en formato JSON.
+# re nos permite trabajar con expresiones regulares para buscar texto.
+import http.server
+import socketserver
+import json
+import re
 import os
 
-# --- 1. Carga de Datos ---
-# Define la ruta a la carpeta que contiene los archivos de Excel.
-data_path = 'BDs'
-clientes_path = os.path.join(data_path, 'clientes.xlsx')
-productos_path = os.path.join(data_path, 'productos.xlsx')
-ventas_path = os.path.join(data_path, 'ventas.xlsx')
-detalle_ventas_path = os.path.join(data_path, 'detalle_ventas.xlsx')
+# Definimos el puerto en el que nuestro servidor escuchará las solicitudes.
+PORT = 8000
 
-# Cargar cada archivo de Excel en un DataFrame de pandas.
-print("Cargando archivos...")
-df_clientes = pd.read_excel(clientes_path)
-df_productos = pd.read_excel(productos_path)
-df_ventas = pd.read_excel(ventas_path)
-df_detalle_ventas = pd.read_excel(detalle_ventas_path)
-print("Archivos cargados correctamente.")
+# Definimos la ruta al archivo de documentación.
+# os.path.join se usa para crear una ruta de archivo que funcione en cualquier sistema operativo.
+DOC_FILE = os.path.join(os.path.dirname(__file__), 'Documentación.md')
 
-# --- 2. Limpieza y Preparación de Datos ---
-print("\nIniciando limpieza de datos...")
+# Función para leer y procesar el archivo de documentación.
+def cargar_documentacion():
+    contenido = {}
+    subsecciones_4 = {}
+    try:
+        with open(DOC_FILE, 'r', encoding='utf-8') as f:
+            texto = f.read()
+        
+        secciones = re.split(r'\n## (\d+\.\s.*?)\n', texto)
+        
+        for i in range(1, len(secciones), 2):
+            titulo = secciones[i].strip()
+            cuerpo = secciones[i+1].strip()
+            
+            if titulo == "4. Características set de datos":
+                partes_subseccion = re.split(r'\n### (4\.\d\..*?)\n', cuerpo)
+                contenido[titulo] = partes_subseccion[0].strip()
+                
+                for j in range(1, len(partes_subseccion), 2):
+                    sub_titulo = partes_subseccion[j].strip()
+                    sub_cuerpo = partes_subseccion[j+1].strip().split('---')[0].strip()
+                    subsecciones_4[sub_titulo] = sub_cuerpo
+            else:
+                contenido[titulo] = cuerpo.split('---')[0].strip()
+            
+    except FileNotFoundError:
+        print(f"Error: No se encontró el archivo {DOC_FILE}")
+        return {}, {}
+    except Exception as e:
+        print(f"Error al leer el archivo: {e}")
+        return {}, {}
+        
+    return contenido, subsecciones_4
 
-# Limpieza de df_clientes
-df_clientes['nombre_cliente'].fillna('Desconocido', inplace=True)
-df_clientes['id_cliente'] = df_clientes['id_cliente'].astype(int)
+documentacion, subsecciones_documentacion = cargar_documentacion()
 
-# Limpieza de df_productos
-df_productos['nombre_producto'].fillna('Sin Nombre', inplace=True)
-df_productos['precio_unitario'] = pd.to_numeric(df_productos['precio_unitario'], errors='coerce')
-df_productos['precio_unitario'].fillna(0, inplace=True)
-df_productos['id_producto'] = df_productos['id_producto'].astype(int)
+# Mapeamos los números del menú a los títulos de las secciones.
+mapeo_menu = {
+    "1": "1. Tema del Proyecto",
+    "2": "2. Problema",
+    "3": "3. Solución Propuesta",
+    "4": "4. Características set de datos",
+    "5": "5. Pasos",
+    "6": "6. Diagrama de flujo",
+    "7": "7. Pseudocódigo"
+}
 
-# Limpieza de df_ventas
-df_ventas['fecha'] = pd.to_datetime(df_ventas['fecha'])
-df_ventas['id_venta'] = df_ventas['id_venta'].astype(int)
-df_ventas['id_cliente'] = df_ventas['id_cliente'].astype(int)
+# Mapeo para las subsecciones de la opción 4.
+mapeo_subsecciones = {
+    "4.1": "4.1. Base de Datos: Clientes",
+    "4.2": "4.2. Base de Datos: Productos",
+    "4.3": "4.3. Base de Datos: Ventas",
+    "4.4": "4.4. Base de Datos: Detalle de Ventas"
+}
 
-# Limpieza de df_detalle_ventas
-df_detalle_ventas['id_venta'] = df_detalle_ventas['id_venta'].astype(int)
-df_detalle_ventas['id_producto'] = df_detalle_ventas['id_producto'].astype(int)
-df_detalle_ventas['cantidad'] = df_detalle_ventas['cantidad'].astype(int)
+class ChatbotHandler(http.server.SimpleHTTPRequestHandler):
+    def do_POST(self):
+        if self.path == '/api/chatbot':
+            try:
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length)
+                body = json.loads(post_data)
+                opcion = body.get('opcion')
+                subopcion = body.get('subopcion')
 
-# Antes de unificar, eliminamos columnas duplicadas que ya existen en otras tablas
-# para evitar conflictos en la unificación.
-df_ventas.drop(columns=['nombre_cliente', 'email'], inplace=True)
-df_detalle_ventas.drop(columns=['nombre_producto', 'precio_unitario', 'importe'], inplace=True)
+                response_data = {}
 
-print("Limpieza de datos completada.")
+                if subopcion:
+                    titulo_subseccion = mapeo_subsecciones.get(subopcion)
+                    respuesta = subsecciones_documentacion.get(titulo_subseccion, "Información no disponible.")
+                    response_data = {'respuesta': respuesta}
+                elif opcion == "4":
+                    intro_seccion_4 = documentacion.get(mapeo_menu.get("4"), "")
+                    response_data = {
+                        'respuesta': intro_seccion_4,
+                        'subsecciones': True,
+                        'opciones_subseccion': [
+                            { "texto": "Base de Datos: Clientes", "valor": "4.1" },
+                            { "texto": "Base de Datos: Productos", "valor": "4.2" },
+                            { "texto": "Base de Datos: Ventas", "valor": "4.3" },
+                            { "texto": "Base de Datos: Detalle de Ventas", "valor": "4.4" }
+                        ]
+                    }
+                elif opcion:
+                    titulo_seccion = mapeo_menu.get(opcion)
+                    respuesta = documentacion.get(titulo_seccion, "Información no disponible.")
+                    if not respuesta.strip():
+                        respuesta = "Esta sección no tiene contenido en el archivo de documentación."
+                    response_data = {'respuesta': respuesta}
+                else:
+                    self.send_response(400)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error': 'No se especificó una opción válida.'}).encode('utf-8'))
+                    return
 
-# --- 3. Unificación de Datos (Merge) ---
-print("\nUnificando los datos en un único DataFrame...")
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(response_data).encode('utf-8'))
 
-# Unimos ventas con los detalles de la venta
-df_ventas_detalle = pd.merge(df_ventas, df_detalle_ventas, on='id_venta')
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+        else:
+            super().do_POST()
 
-# Añadimos la información de los productos
-df_ventas_productos = pd.merge(df_ventas_detalle, df_productos, on='id_producto')
+    # Este método se ejecuta cuando llega una solicitud GET.
+    def do_GET(self):
+        # Si el usuario pide la página principal, le servimos el archivo index.html.
+        if self.path == '/':
+            # Cambiamos la ruta para que apunte al archivo dentro de la carpeta 'templates'.
+            self.path = '/templates/index.html'
+        # Dejamos que la clase base maneje la solicitud para servir el archivo.
+        return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
-# Finalmente, integramos la información de los clientes
-df_analitico_principal = pd.merge(df_ventas_productos, df_clientes, on='id_cliente')
-
-print("¡Unificación completada!")
-
-# --- 4. Visualización del DataFrame Final ---
-print("\nMostrando las primeras 10 filas del DataFrame analítico principal:")
-print(df_analitico_principal.head(10))
-
-print("\nInformación general del DataFrame final:")
-df_analitico_principal.info()
-
-# Guardar el DataFrame unificado en un nuevo archivo CSV o Excel.
-output_path = os.path.join('BDSalida', 'reporte_analitico.csv')
-df_analitico_principal.to_csv(output_path, index=False)
-print(f"\nDataFrame analítico guardado como '{output_path}'")
-
-# --- 5. Análisis de Datos ---
-print("\n--- INICIANDO ANÁLISIS DE DATOS ---")
-
-# Cargamos el dataset analítico que generamos en el paso anterior.
-df_analisis = pd.read_csv(output_path)
-
-# Calculamos la columna 'importe' que representa el valor total de cada línea de venta.
-df_analisis['importe'] = df_analisis['cantidad'] * df_analisis['precio_unitario']
-
-# 1) Top 5 Productos por Cantidad e Importe
-print("\n--- 1. Top 5 Productos ---")
-# Por cantidad
-top_productos_cantidad = df_analisis.groupby('nombre_producto')['cantidad'].sum().nlargest(5)
-print("\nTop 5 Productos por Cantidad Vendida:")
-print(top_productos_cantidad)
-
-# Por importe
-top_productos_importe = df_analisis.groupby('nombre_producto')['importe'].sum().nlargest(5)
-print("\nTop 5 Productos por Importe Total:")
-print(top_productos_importe)
-
-# 2) Top 5 Clientes por Gasto Acumulado
-print("\n--- 2. Top 5 Clientes por Gasto ---")
-top_clientes = df_analisis.groupby('nombre_cliente')['importe'].sum().nlargest(5)
-print(top_clientes)
-
-# 3) Ventas por Ciudad
-print("\n--- 3. Ventas Totales por Ciudad ---")
-ventas_ciudad = df_analisis.groupby('ciudad')['importe'].sum().sort_values(ascending=False)
-print(ventas_ciudad)
-
-# 4) Distribución de Medios de Pago
-print("\n--- 4. Distribución de Medios de Pago ---")
-distribucion_pago = df_analisis['medio_pago'].value_counts()
-print(distribucion_pago)
+# Configuramos el servidor para que use nuestro manejador de solicitudes.
+with socketserver.TCPServer(("", PORT), ChatbotHandler) as httpd:
+    print("¡Hola! Soy Aurelion, tu asistente virtual.")
+    print(f"Puedes hablar conmigo abriendo tu navegador y visitando: http://localhost:{PORT}")
+    # Ponemos el servidor en marcha para que empiece a escuchar solicitudes.
+    httpd.serve_forever()
