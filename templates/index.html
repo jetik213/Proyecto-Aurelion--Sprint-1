@@ -48,6 +48,32 @@
             font-size: 1.4em;
             font-weight: 600;
         }
+        
+        .sprint-buttons {
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+
+        .sprint-button {
+            background-color: #fff;
+            border: 1px solid #007BFF;
+            color: #007BFF;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            margin: 0 5px;
+        }
+
+        .sprint-button.active {
+            background-color: #007BFF;
+            color: white;
+        }
+
 
         /* Ventana donde se muestran los mensajes */
         .chat-window {
@@ -151,6 +177,10 @@
         <div class="chat-header">
             <h2>Asistente Aurelion</h2>
         </div>
+        <div class="sprint-buttons">
+            <button class="sprint-button active" id="sprint1-button">SPRINT 1</button>
+            <button class="sprint-button" id="sprint2-button">SPRINT 2</button>
+        </div>
         <div class="chat-window" id="chat-window">
             <!-- El primer mensaje del bot se añade aquí con JavaScript -->
         </div>
@@ -163,38 +193,45 @@
     </div>
 
     <script>
-        // Obtenemos las referencias a los elementos del DOM que vamos a manipular.
         const chatWindow = document.getElementById('chat-window');
         const menuOptions = document.getElementById('menu-options');
         const subOptionsContainer = document.getElementById('sub-options');
+        const sprint1Button = document.getElementById('sprint1-button');
+        const sprint2Button = document.getElementById('sprint2-button');
 
-        // Definimos las opciones del menú.
-        const opciones = [
-            { texto: "Tema del Proyecto", valor: "1" },
-            { texto: "Problema", valor: "2" },
-            { texto: "Solución Propuesta", valor: "3" },
-            { texto: "Set de datos", valor: "4" },
-            { texto: "Pasos", valor: "5" },
-            { texto: "Diagrama de flujo", valor: "6" },
-            { texto: "Pseudocódigo", valor: "7" }
+        let currentSprint = 1;
+
+        const opcionesSprint1 = [
+            { texto: "Tema del Proyecto", valor: "1.1" },
+            { texto: "Problema", valor: "1.2" },
+            { texto: "Solución Propuesta", valor: "1.3" },
+            { texto: "Características set de datos", valor: "1.4" },
+            { texto: "Pasos", valor: "1.5" },
+            { texto: "Diagrama de flujo", valor: "1.6" },
+            { texto: "Pseudocódigo", valor: "1.7" }
         ];
 
-        // Función para añadir un mensaje a la ventana de chat.
+        const opcionesSprint2 = [
+            { texto: "Problema", valor: "2.1" },
+            { texto: "Solución Propuesta", valor: "2.2" },
+            { texto: "Limpieza de Datos", valor: "2.3" },
+            { texto: "Estadísticas descriptivas", valor: "2.4" },
+            { texto: "Distribución de variables", valor: "2.5" },
+            { texto: "Detección de Outliers", valor: "2.6" },
+            { texto: "Gráficos", valor: "2.7" },
+            { texto: "Interpretación de resultados", valor: "2.8" }
+        ];
+
         function agregarMensaje(texto, remitente) {
             const messageElement = document.createElement('div');
             messageElement.classList.add('message', remitente === 'bot' ? 'bot-message' : 'user-message');
-            
-            // Usamos la librería marked para convertir el texto de Markdown a HTML.
             messageElement.innerHTML = marked.parse(texto);
-
             chatWindow.appendChild(messageElement);
-            // Hacemos scroll hacia abajo para que el último mensaje sea visible.
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        // Función para mostrar las sub-opciones como botones.
         function mostrarSubsecciones(opcionesSubseccion) {
-            subOptionsContainer.innerHTML = ''; // Limpiamos el contenedor
+            subOptionsContainer.innerHTML = '';
             opcionesSubseccion.forEach(subOpcion => {
                 const button = document.createElement('button');
                 button.textContent = subOpcion.texto;
@@ -204,10 +241,9 @@
             });
         }
 
-        // Función para manejar la selección de una sub-opción.
         async function seleccionarSubseccion(subOpcion) {
             agregarMensaje(subOpcion.texto, 'user');
-            subOptionsContainer.innerHTML = ''; // Ocultamos los botones de sub-opción
+            subOptionsContainer.innerHTML = '';
 
             const thinkingMessage = document.createElement('div');
             thinkingMessage.classList.add('message', 'bot-message');
@@ -235,16 +271,11 @@
             }
         }
 
-        // Función para manejar la selección de una opción del menú.
         async function seleccionarOpcion(opcion) {
-            // Mostramos la opción que el usuario eligió.
             agregarMensaje(opcion.texto, 'user');
-
-            // Deshabilitamos el formulario para evitar envíos múltiples
             document.getElementById('menu-select').disabled = true;
             document.getElementById('send-button').disabled = true;
 
-            // Mostramos un mensaje de "pensando..." para que el usuario sepa que algo está pasando.
             const thinkingMessage = document.createElement('div');
             thinkingMessage.classList.add('message', 'bot-message');
             thinkingMessage.innerHTML = "Consultando la información...";
@@ -252,89 +283,68 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
-                // Hacemos la solicitud a nuestro servidor Python (backend).
                 const response = await fetch('/api/chatbot', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    // Enviamos la opción seleccionada en formato JSON.
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ opcion: opcion.valor }),
                 });
 
-                if (!response.ok) {
-                    // Si la respuesta del servidor no es exitosa, lanzamos un error.
-                    throw new Error('Error en la respuesta del servidor.');
-                }
+                if (!response.ok) throw new Error('Error en la respuesta del servidor.');
 
-                // Convertimos la respuesta JSON a un objeto de JavaScript.
                 const data = await response.json();
-                
-                // Eliminamos el mensaje de "pensando...".
                 chatWindow.removeChild(thinkingMessage);
 
                 if (data.subsecciones) {
-                    // Si la respuesta indica que hay subsecciones, las mostramos.
                     if (data.respuesta) {
                         agregarMensaje(data.respuesta, 'bot');
                     }
-                    agregarMensaje("Por favor, elige una de las siguientes bases de datos para ver su detalle:", 'bot');
+                    agregarMensaje("Por favor, elige una de las siguientes opciones para ver su detalle:", 'bot');
                     mostrarSubsecciones(data.opciones_subseccion);
                 } else {
-                    // Si no, mostramos la respuesta directamente.
                     agregarMensaje(data.respuesta, 'bot');
                 }
 
             } catch (error) {
-                // Si ocurre un error en la comunicación, lo mostramos en el chat.
                 chatWindow.removeChild(thinkingMessage);
                 agregarMensaje('Lo siento, no pude obtener la información. Inténtalo de nuevo.', 'bot');
                 console.error('Error:', error);
             } finally {
-                // Volvemos a habilitar el formulario
                 document.getElementById('menu-select').disabled = false;
                 document.getElementById('send-button').disabled = false;
             }
         }
 
-        // Función para inicializar el chatbot.
-        function iniciarChat() {
-            // Mensaje de bienvenida del bot.
-            agregarMensaje("¡Hola! Soy Aurelion, tu asistente virtual. ¿Sobre qué te gustaría saber? Elige una de las siguientes opciones:", 'bot');
+        function cargarOpciones(sprint) {
+            const opciones = sprint === 1 ? opcionesSprint1 : opcionesSprint2;
+            
+            menuOptions.innerHTML = '';
+            subOptionsContainer.innerHTML = '';
 
-            // Creamos el menú desplegable
             const menuSelect = document.createElement('select');
             menuSelect.id = 'menu-select';
             menuSelect.classList.add('menu-select');
 
-            // Añadimos una opción por defecto, que estará seleccionada pero deshabilitada.
             const defaultOption = document.createElement('option');
             defaultOption.textContent = "Selecciona una opción...";
             defaultOption.disabled = true;
             defaultOption.selected = true;
             menuSelect.appendChild(defaultOption);
 
-            // Creamos y añadimos las opciones al menú desplegable.
             opciones.forEach(opcion => {
                 const optionElement = document.createElement('option');
-                // Añadimos el número al texto que se muestra.
                 optionElement.textContent = `${opcion.valor}. ${opcion.texto}`;
                 optionElement.value = opcion.valor;
                 menuSelect.appendChild(optionElement);
             });
 
-            // Creamos el botón de envío.
             const sendButton = document.createElement('button');
             sendButton.id = 'send-button';
             sendButton.textContent = 'Enviar';
             sendButton.classList.add('menu-button');
 
-            // Asignamos el evento de clic al botón.
             sendButton.onclick = () => {
                 const selectedValue = menuSelect.value;
-                // Nos aseguramos de que se haya elegido una opción válida.
                 if (selectedValue && !menuSelect.options[menuSelect.selectedIndex].disabled) {
-                    // Buscamos el objeto 'opcion' completo para pasarlo a la función.
                     const selectedOpcion = opciones.find(o => o.valor === selectedValue);
                     if (selectedOpcion) {
                         seleccionarOpcion(selectedOpcion);
@@ -342,14 +352,32 @@
                 }
             };
             
-            // Limpiamos el contenedor de opciones y añadimos los nuevos elementos.
-            menuOptions.innerHTML = '';
             menuOptions.appendChild(menuSelect);
             menuOptions.appendChild(sendButton);
         }
 
-        // Iniciamos el chat cuando la página se carga completamente.
-        window.onload = iniciarChat;
+        function cambiarSprint(sprint) {
+            currentSprint = sprint;
+            if (sprint === 1) {
+                sprint1Button.classList.add('active');
+                sprint2Button.classList.remove('active');
+            } else {
+                sprint1Button.classList.remove('active');
+                sprint2Button.classList.add('active');
+            }
+            iniciarChat();
+        }
+
+        function iniciarChat() {
+            chatWindow.innerHTML = '';
+            agregarMensaje(`¡Hola! Soy Aurelion. Estás en el SPRINT ${currentSprint}. ¿Sobre qué te gustaría saber?`, 'bot');
+            cargarOpciones(currentSprint);
+        }
+
+        sprint1Button.onclick = () => cambiarSprint(1);
+        sprint2Button.onclick = () => cambiarSprint(2);
+
+        window.onload = () => cambiarSprint(1);
     </script>
 
 </body>
